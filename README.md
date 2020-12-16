@@ -11,3 +11,8 @@ www.openfst.org
 > make  
 > make install  
 
+# how to build static and shared library
+> ./configure --enable-static --enable-shared  
+> make  
+> make install  
+
