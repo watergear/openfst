@@ -14,6 +14,7 @@
 #include <utility>
 
 #include <fst/compat.h>
+#include <fst/types.h>
 #include <fst/log.h>
 
 #include <fst/util.h>
@@ -132,8 +133,8 @@ constexpr size_t kNumRandomWeights = 5;
 // Weight property boolean constants needed for SFINAE.
 
 template <class W>
-using IsIdempotent = std::integral_constant<bool,
-    (W::Properties() & kIdempotent) != 0>;
+using IsIdempotent =
+    std::integral_constant<bool, (W::Properties() & kIdempotent) != 0>;
 
 template <class W>
 using IsPath = std::integral_constant<bool, (W::Properties() & kPath) != 0>;
@@ -211,16 +212,18 @@ Weight Power(const Weight &weight, size_t n) {
 template <class Weight>
 class Adder {
  public:
-  explicit Adder(Weight w = Weight::Zero()) : sum_(w) { }
+  Adder() : sum_(Weight::Zero()) {}
+
+  explicit Adder(Weight w) : sum_(std::move(w)) {}
 
   Weight Add(const Weight &w) {
     sum_ = Plus(sum_, w);
     return sum_;
   }
 
-  Weight Sum() { return sum_; }
+  Weight Sum() const { return sum_; }
 
-  void Reset(Weight w = Weight::Zero()) { sum_ = w; }
+  void Reset(Weight w = Weight::Zero()) { sum_ = std::move(w); }
 
  private:
   Weight sum_;
@@ -230,8 +233,8 @@ class Adder {
 template <class W1, class W2>
 struct WeightConvert {
   W2 operator()(W1 w1) const {
-    FSTERROR() << "WeightConvert: Can't convert weight from \"" << W1::Type()
-               << "\" to \"" << W2::Type();
+    FSTERROR() << "WeightConvert: Can't convert weight from " << W1::Type()
+               << " to " << W2::Type();
     return W2::NoWeight();
   }
 };
@@ -239,10 +242,25 @@ struct WeightConvert {
 // Specialized weight converter to self.
 template <class W>
 struct WeightConvert<W, W> {
-  W operator()(W weight) const { return weight; }
+  constexpr W operator()(W weight) const { return weight; }
 };
 
 // General random weight generator: raises error.
+//
+// The standard interface is roughly:
+//
+// class WeightGenerate<MyWeight> {
+//  public:
+//   explicit WeightGenerate(uint64 seed = std::random_device()(),
+//                           bool allow_zero = true,
+//                           ...);
+//
+//   MyWeight operator()() const;
+// };
+//
+// Many weight generators also take trailing constructor arguments specifying
+// the number of random (unique) weights, the length of weights (e.g., for
+// string-based weights), etc. with sensible defaults
 template <class W>
 struct WeightGenerate {
   W operator()() const {
@@ -347,7 +365,7 @@ class CompositeWeightReader : public internal::CompositeWeightIO {
 
 template <class T>
 inline bool CompositeWeightReader::ReadElement(T *comp, bool last) {
-  string s;
+  std::string s;
   const bool has_parens = open_paren_ != 0;
   while ((c_ != std::istream::traits_type::eof()) && !std::isspace(c_) &&
          (c_ != separator_ || depth_ > 1 || last) &&

@@ -1,9 +1,12 @@
+// See www.openfst.org for extensive documentation on this weighted
+// finite-state transducer library.
+
 #include <fst/script/getters.h>
 
 namespace fst {
 namespace script {
 
-bool GetArcSortType(const string &str, ArcSortType *sort_type) {
+bool GetArcSortType(const std::string &str, ArcSortType *sort_type) {
   if (str == "ilabel") {
     *sort_type = ILABEL_SORT;
   } else if (str == "olabel") {
@@ -14,13 +17,15 @@ bool GetArcSortType(const string &str, ArcSortType *sort_type) {
   return true;
 }
 
-bool GetComposeFilter(const string &str, ComposeFilter *compose_filter) {
+bool GetComposeFilter(const std::string &str, ComposeFilter *compose_filter) {
   if (str == "alt_sequence") {
     *compose_filter = ALT_SEQUENCE_FILTER;
   } else if (str == "auto") {
     *compose_filter = AUTO_FILTER;
   } else if (str == "match") {
     *compose_filter = MATCH_FILTER;
+  } else if (str == "no_match") {
+    *compose_filter = NO_MATCH_FILTER;
   } else if (str == "null") {
     *compose_filter = NULL_FILTER;
   } else if (str == "sequence") {
@@ -33,7 +38,7 @@ bool GetComposeFilter(const string &str, ComposeFilter *compose_filter) {
   return true;
 }
 
-bool GetDeterminizeType(const string &str, DeterminizeType *det_type) {
+bool GetDeterminizeType(const std::string &str, DeterminizeType *det_type) {
   if (str == "functional") {
     *det_type = DETERMINIZE_FUNCTIONAL;
   } else if (str == "nonfunctional") {
@@ -46,7 +51,7 @@ bool GetDeterminizeType(const string &str, DeterminizeType *det_type) {
   return true;
 }
 
-bool GetMapType(const string &str, MapType *map_type) {
+bool GetMapType(const std::string &str, MapType *map_type) {
   if (str == "arc_sum") {
     *map_type = ARC_SUM_MAPPER;
   } else if (str == "arc_unique") {
@@ -83,7 +88,18 @@ bool GetMapType(const string &str, MapType *map_type) {
   return true;
 }
 
-bool GetRandArcSelection(const string &str, RandArcSelection *ras) {
+bool GetProjectType(const std::string &str, ProjectType *project_type) {
+  if (str == "input") {
+    *project_type = ProjectType::INPUT;
+  } else if (str == "output") {
+    *project_type = ProjectType::OUTPUT;
+  } else {
+    return false;
+  }
+  return true;
+}
+
+bool GetRandArcSelection(const std::string &str, RandArcSelection *ras) {
   if (str == "uniform") {
     *ras = UNIFORM_ARC_SELECTOR;
   } else if (str == "log_prob") {
@@ -96,7 +112,7 @@ bool GetRandArcSelection(const string &str, RandArcSelection *ras) {
   return true;
 }
 
-bool GetQueueType(const string &str, QueueType *queue_type) {
+bool GetQueueType(const std::string &str, QueueType *queue_type) {
   if (str == "auto") {
     *queue_type = AUTO_QUEUE;
   } else if (str == "fifo") {
@@ -115,7 +131,7 @@ bool GetQueueType(const string &str, QueueType *queue_type) {
   return true;
 }
 
-bool GetReplaceLabelType(const string &str, bool epsilon_on_replace,
+bool GetReplaceLabelType(const std::string &str, bool epsilon_on_replace,
                          ReplaceLabelType *rlt) {
   if (epsilon_on_replace || str == "neither") {
     *rlt = REPLACE_LABEL_NEITHER;
@@ -125,6 +141,19 @@ bool GetReplaceLabelType(const string &str, bool epsilon_on_replace,
     *rlt = REPLACE_LABEL_OUTPUT;
   } else if (str == "both") {
     *rlt = REPLACE_LABEL_BOTH;
+  } else {
+    return false;
+  }
+  return true;
+}
+
+bool GetTokenType(const std::string &str, TokenType *token_type) {
+  if (str == "byte") {
+    *token_type = TokenType::BYTE;
+  } else if (str == "utf8") {
+    *token_type = TokenType::UTF8;
+  } else if (str == "symbol") {
+    *token_type = TokenType::SYMBOL;
   } else {
     return false;
   }

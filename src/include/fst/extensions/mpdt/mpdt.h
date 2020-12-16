@@ -13,6 +13,7 @@
 
 #include <fst/compat.h>
 #include <fst/extensions/pdt/pdt.h>
+#include <unordered_map>
 
 namespace fst {
 
@@ -145,12 +146,12 @@ class MPdtStack {
   }
 
   // TODO(rws): For debugging purposes only: remove later.
-  string PrintConfig(const Config &config) const {
-    string result = "[";
+  std::string PrintConfig(const Config &config) const {
+    std::string result = "[";
     for (Level i = 0; i < nlevels; ++i) {
       char s[128];
       snprintf(s, sizeof(s), "%d", config[i]);
-      result += string(s);
+      result += std::string(s);
       if (i < nlevels - 1) result += ", ";
     }
     result += "]";
@@ -202,7 +203,7 @@ class MPdtStack {
   Label max_paren_;
   // Stores level of each paren.
   std::unordered_map<Label, Label> paren_levels_;
-  std::vector<std::pair<Label, Label>> parens_;  // As in pdt.h.
+  std::vector<std::pair<Label, Label>> parens_;   // As in pdt.h.
   std::unordered_map<Label, size_t> paren_map_;  // As in pdt.h.
   // Maps between internal paren_id and external paren_id.
   std::unordered_map<KeyPair<Level>, size_t, KeyPairHasher<Level>>

@@ -6,11 +6,12 @@
 #ifndef FST_STRING_WEIGHT_H_
 #define FST_STRING_WEIGHT_H_
 
-#include <cstdlib>
-
 #include <list>
+#include <random>
 #include <string>
 #include <vector>
+
+#include <fst/types.h>
 
 #include <fst/product-weight.h>
 #include <fst/union-weight.h>
@@ -41,10 +42,10 @@ template <class>
 class StringWeightReverseIterator;
 
 // String semiring: (longest_common_prefix/suffix, ., Infinity, Epsilon)
-template <typename Label_, StringType S = STRING_LEFT>
+template <typename L, StringType S = STRING_LEFT>
 class StringWeight {
  public:
-  using Label = Label_;
+  using Label = L;
   using ReverseWeight = StringWeight<Label, ReverseStringType(S)>;
   using Iterator = StringWeightIterator<StringWeight>;
   using ReverseIterator = StringWeightReverseIterator<StringWeight>;
@@ -55,7 +56,7 @@ class StringWeight {
   StringWeight() {}
 
   template <typename Iterator>
-  StringWeight(const Iterator &begin, const Iterator &end) {
+  StringWeight(const Iterator begin, const Iterator end) {
     for (auto iter = begin; iter != end; ++iter) PushBack(*iter);
   }
 
@@ -76,8 +77,8 @@ class StringWeight {
     return *no_weight;
   }
 
-  static const string &Type() {
-    static const string *const type = new string(
+  static const std::string &Type() {
+    static const std::string *const type = new std::string(
         S == STRING_LEFT
             ? "left_string"
             : (S == STRING_RIGHT ? "right_string" : "restricted_string"));
@@ -311,7 +312,7 @@ inline std::ostream &operator<<(std::ostream &strm,
 template <typename Label, StringType S>
 inline std::istream &operator>>(std::istream &strm,
                                 StringWeight<Label, S> &weight) {
-  string str;
+  std::string str;
   strm >> str;
   using Weight = StringWeight<Label, S>;
   if (str == "Infinity") {
@@ -468,7 +469,7 @@ inline StringWeight<Label, STRING_LEFT> Divide(
     const StringWeight<Label, STRING_LEFT> &w2, DivideType divide_type) {
   if (divide_type != DIVIDE_LEFT) {
     FSTERROR() << "StringWeight::Divide: Only left division is defined "
-               << "for the left string semiring";
+               << "for the left std::string semiring";
     return StringWeight<Label, STRING_LEFT>::NoWeight();
   }
   return DivideLeft(w1, w2);
@@ -481,7 +482,7 @@ inline StringWeight<Label, STRING_RIGHT> Divide(
     const StringWeight<Label, STRING_RIGHT> &w2, DivideType divide_type) {
   if (divide_type != DIVIDE_RIGHT) {
     FSTERROR() << "StringWeight::Divide: Only right division is defined "
-               << "for the right string semiring";
+               << "for the right std::string semiring";
     return StringWeight<Label, STRING_RIGHT>::NoWeight();
   }
   return DivideRight(w1, w2);
@@ -495,30 +496,32 @@ class WeightGenerate<StringWeight<Label, S>> {
  public:
   using Weight = StringWeight<Label, S>;
 
-  explicit WeightGenerate(bool allow_zero = true,
+  explicit WeightGenerate(uint64 seed = std::random_device()(),
+                          bool allow_zero = true,
                           size_t alphabet_size = kNumRandomWeights,
                           size_t max_string_length = kNumRandomWeights)
-      : allow_zero_(allow_zero),
+      : rand_(seed),
+        allow_zero_(allow_zero),
         alphabet_size_(alphabet_size),
         max_string_length_(max_string_length) {}
 
   Weight operator()() const {
-    size_t n = rand() % (max_string_length_ + allow_zero_);  // NOLINT
+    const int n = std::uniform_int_distribution<>(
+        0, max_string_length_ + allow_zero_)(rand_);
     if (allow_zero_ && n == max_string_length_) return Weight::Zero();
     std::vector<Label> labels;
     labels.reserve(n);
-    for (size_t i = 0; i < n; ++i) {
-      labels.push_back(rand() % alphabet_size_ + 1);  // NOLINT
+    for (int i = 0; i < n; ++i) {
+      labels.push_back(
+          std::uniform_int_distribution<>(1, alphabet_size_)(rand_));
     }
     return Weight(labels.begin(), labels.end());
   }
 
  private:
-  // Permits Zero() and zero divisors.
+  mutable std::mt19937_64 rand_;
   const bool allow_zero_;
-  // Alphabet size for random weights.
   const size_t alphabet_size_;
-  // Number of alternative random weights.
   const size_t max_string_length_;
 };
 
@@ -565,7 +568,7 @@ struct GallicWeight
 
   GallicWeight(SW w1, W w2) : ProductWeight<SW, W>(w1, w2) {}
 
-  explicit GallicWeight(const string &s, int *nread = nullptr)
+  explicit GallicWeight(const std::string &s, int *nread = nullptr)
       : ProductWeight<SW, W>(s, nread) {}
 
   explicit GallicWeight(const ProductWeight<SW, W> &w)
@@ -586,8 +589,8 @@ struct GallicWeight
     return no_weight;
   }
 
-  static const string &Type() {
-    static const string *const type = new string(
+  static const std::string &Type() {
+    static const std::string *const type = new std::string(
         G == GALLIC_LEFT
             ? "left_gallic"
             : (G == GALLIC_RIGHT
@@ -650,7 +653,9 @@ class WeightGenerate<GallicWeight<Label, W, G>>
   using Generate = WeightGenerate<
       ProductWeight<StringWeight<Label, GallicStringType(G)>, W>>;
 
-  explicit WeightGenerate(bool allow_zero = true) : generate_(allow_zero) {}
+  explicit WeightGenerate(uint64 seed = std::random_device()(),
+                          bool allow_zero = true)
+      : generate_(seed, allow_zero) {}
 
   Weight operator()() const { return Weight(generate_()); }
 
@@ -721,7 +726,7 @@ struct GallicWeight<Label, W, GALLIC>
 
   GallicWeight(SW w1, W w2) : UW(GW(w1, w2)) {}
 
-  explicit GallicWeight(const string &str, int *nread = nullptr)
+  explicit GallicWeight(const std::string &str, int *nread = nullptr)
       : UW(str, nread) {}
 
   static const GallicWeight<Label, W, GALLIC> &Zero() {
@@ -739,8 +744,8 @@ struct GallicWeight<Label, W, GALLIC>
     return no_weight;
   }
 
-  static const string &Type() {
-    static const string *const type = new string("gallic");
+  static const std::string &Type() {
+    static const std::string *const type = new std::string("gallic");
     return *type;
   }
 
@@ -794,7 +799,9 @@ class WeightGenerate<GallicWeight<Label, W, GALLIC>>
       WeightGenerate<UnionWeight<GallicWeight<Label, W, GALLIC_RESTRICT>,
                                  GallicUnionWeightOptions<Label, W>>>;
 
-  explicit WeightGenerate(bool allow_zero = true) : generate_(allow_zero) {}
+  explicit WeightGenerate(uint64 seed = std::random_device()(),
+                          bool allow_zero = true)
+      : generate_(seed, allow_zero) {}
 
   Weight operator()() const { return Weight(generate_()); }
 

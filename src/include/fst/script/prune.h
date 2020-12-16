@@ -20,27 +20,26 @@ using PruneArgs1 = std::tuple<const FstClass &, MutableFstClass *,
 template <class Arc>
 void Prune(PruneArgs1 *args) {
   using Weight = typename Arc::Weight;
-  const Fst<Arc> &ifst = *(std::get<0>(*args).GetFst<Arc>());
+  const Fst<Arc> &ifst = *std::get<0>(*args).GetFst<Arc>();
   MutableFst<Arc> *ofst = std::get<1>(*args)->GetMutableFst<Arc>();
-  const auto weight_threshold = *(std::get<2>(*args).GetWeight<Weight>());
+  const auto weight_threshold = *std::get<2>(*args).GetWeight<Weight>();
   Prune(ifst, ofst, weight_threshold, std::get<3>(*args), std::get<4>(*args));
 }
 
-using PruneArgs2 = std::tuple<MutableFstClass *, const WeightClass &, int64,
-                               float>;
+using PruneArgs2 =
+    std::tuple<MutableFstClass *, const WeightClass &, int64, float>;
 
 template <class Arc>
 void Prune(PruneArgs2 *args) {
   using Weight = typename Arc::Weight;
   MutableFst<Arc> *fst = std::get<0>(*args)->GetMutableFst<Arc>();
-  const auto weight_threshold = *(std::get<1>(*args).GetWeight<Weight>());
+  const auto weight_threshold = *std::get<1>(*args).GetWeight<Weight>();
   Prune(fst, weight_threshold, std::get<2>(*args), std::get<3>(*args));
 }
 
 void Prune(const FstClass &ifst, MutableFstClass *ofst,
            const WeightClass &weight_threshold,
-           int64 state_threshold = kNoStateId,
-           float delta = kDelta);
+           int64 state_threshold = kNoStateId, float delta = kDelta);
 
 void Prune(MutableFstClass *fst, const WeightClass &weight_threshold,
            int64 state_threshold = kNoStateId, float delta = kDelta);

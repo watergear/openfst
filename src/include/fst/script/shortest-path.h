@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 
+#include <fst/types.h>
 #include <fst/shortest-path.h>
 #include <fst/script/fst-class.h>
 #include <fst/script/shortest-distance.h>
@@ -72,9 +73,8 @@ void ShortestPath(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
       return;
     }
     case SHORTEST_FIRST_QUEUE: {
-      ShortestPath<Arc, NaturalShortestFirstQueue<StateId, Weight>>(ifst, ofst,
-                                                                    &distance,
-                                                                    opts);
+      ShortestPath<Arc, NaturalShortestFirstQueue<StateId, Weight>>(
+          ifst, ofst, &distance, opts);
       return;
     }
     case STATE_ORDER_QUEUE: {
@@ -86,8 +86,7 @@ void ShortestPath(const Fst<Arc> &ifst, MutableFst<Arc> *ofst,
       return;
     }
     default: {
-      FSTERROR() << "ShortestPath: Unknown queue type: "
-                 << opts.queue_type;
+      FSTERROR() << "ShortestPath: Unknown queue type: " << opts.queue_type;
       ofst->SetProperties(kError, kError);
       return;
     }
@@ -101,7 +100,7 @@ using ShortestPathArgs = std::tuple<const FstClass &, MutableFstClass *,
 
 template <class Arc>
 void ShortestPath(ShortestPathArgs *args) {
-  const Fst<Arc> &ifst = *(std::get<0>(*args).GetFst<Arc>());
+  const Fst<Arc> &ifst = *std::get<0>(*args).GetFst<Arc>();
   MutableFst<Arc> *ofst = std::get<1>(*args)->GetMutableFst<Arc>();
   const ShortestPathOptions &opts = std::get<2>(*args);
   internal::ShortestPath(ifst, ofst, opts);

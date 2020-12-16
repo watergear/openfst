@@ -3,9 +3,6 @@
 //
 // Regression test for FST weights.
 
-#include <cstdlib>
-#include <ctime>
-
 #include <fst/flags.h>
 #include <fst/log.h>
 #include <fst/expectation-weight.h>
@@ -20,7 +17,7 @@
 #include <fst/union-weight.h>
 #include <fst/test/weight-tester.h>
 
-DEFINE_int32(seed, -1, "random seed");
+DEFINE_uint64(seed, 403, "random seed");
 DEFINE_int32(repeat, 10000, "number of test repetitions");
 
 namespace {
@@ -37,16 +34,18 @@ using fst::MinMaxWeightTpl;
 using fst::NaturalLess;
 using fst::PowerWeight;
 using fst::ProductWeight;
-using fst::SetWeight;
+using fst::RealWeight;
+using fst::RealWeightTpl;
+using fst::SET_BOOLEAN;
 using fst::SET_INTERSECT_UNION;
 using fst::SET_UNION_INTERSECT;
-using fst::SET_BOOLEAN;
+using fst::SetWeight;
 using fst::SignedLogWeight;
 using fst::SignedLogWeightTpl;
 using fst::SparsePowerWeight;
-using fst::StringWeight;
 using fst::STRING_LEFT;
 using fst::STRING_RIGHT;
+using fst::StringWeight;
 using fst::TropicalWeight;
 using fst::TropicalWeightTpl;
 using fst::UnionWeight;
@@ -55,28 +54,33 @@ using fst::WeightGenerate;
 using fst::WeightTester;
 
 template <class T>
-void TestTemplatedWeights(int repeat) {
+void TestTemplatedWeights(uint64 seed, int repeat) {
   using TropicalWeightGenerate = WeightGenerate<TropicalWeightTpl<T>>;
-  TropicalWeightGenerate tropical_generate;
+  TropicalWeightGenerate tropical_generate(seed);
   WeightTester<TropicalWeightTpl<T>, TropicalWeightGenerate> tropical_tester(
       tropical_generate);
   tropical_tester.Test(repeat);
 
   using LogWeightGenerate = WeightGenerate<LogWeightTpl<T>>;
-  LogWeightGenerate log_generate;
+  LogWeightGenerate log_generate(seed);
   WeightTester<LogWeightTpl<T>, LogWeightGenerate> log_tester(log_generate);
   log_tester.Test(repeat);
 
+  using RealWeightGenerate = WeightGenerate<RealWeightTpl<T>>;
+  RealWeightGenerate real_generate(seed);
+  WeightTester<RealWeightTpl<T>, RealWeightGenerate> real_tester(real_generate);
+  real_tester.Test(repeat);
+
   using MinMaxWeightGenerate = WeightGenerate<MinMaxWeightTpl<T>>;
-  MinMaxWeightGenerate minmax_generate(true);
+  MinMaxWeightGenerate minmax_generate(seed, true);
   WeightTester<MinMaxWeightTpl<T>, MinMaxWeightGenerate> minmax_tester(
       minmax_generate);
   minmax_tester.Test(repeat);
 
   using SignedLogWeightGenerate = WeightGenerate<SignedLogWeightTpl<T>>;
-  SignedLogWeightGenerate signedlog_generate;
-  WeightTester<SignedLogWeightTpl<T>, SignedLogWeightGenerate>
-      signedlog_tester(signedlog_generate);
+  SignedLogWeightGenerate signedlog_generate(seed, true);
+  WeightTester<SignedLogWeightTpl<T>, SignedLogWeightGenerate> signedlog_tester(
+      signedlog_generate);
   signedlog_tester.Test(repeat);
 }
 
@@ -97,7 +101,7 @@ void TestSignedAdder(int n) {
   Adder<Weight> adder;
   const Weight minus_one = Minus(Weight::Zero(), Weight::One());
   for (int i = 0; i < n; ++i) {
-    if (i < n/4 || i > 3*n/4) {
+    if (i < n / 4 || i > 3 * n / 4) {
       sum = Plus(sum, Weight::One());
       adder.Add(Weight::One());
     } else {
@@ -111,8 +115,8 @@ void TestSignedAdder(int n) {
 template <typename Weight1, typename Weight2>
 void TestWeightConversion(Weight1 w1) {
   // Tests round-trp conversion.
-  WeightConvert<Weight2, Weight1> to_w1_;
-  WeightConvert<Weight1, Weight2> to_w2_;
+  const WeightConvert<Weight2, Weight1> to_w1_;
+  const WeightConvert<Weight1, Weight2> to_w2_;
   Weight2 w2 = to_w2_(w1);
   Weight1 nw1 = to_w1_(w2);
   CHECK_EQ(w1, nw1);
@@ -280,45 +284,46 @@ int main(int argc, char **argv) {
   std::set_new_handler(FailedNewHandler);
   SET_FLAGS(argv[0], &argc, &argv, true);
 
-  LOG(INFO) << "Seed = " << FLAGS_seed;
-  srand(FLAGS_seed);
-
-  TestTemplatedWeights<float>(FLAGS_repeat);
-  TestTemplatedWeights<double>(FLAGS_repeat);
+  TestTemplatedWeights<float>(FLAGS_seed, FLAGS_repeat);
+  TestTemplatedWeights<double>(FLAGS_seed, FLAGS_repeat);
   FLAGS_fst_weight_parentheses = "()";
-  TestTemplatedWeights<float>(FLAGS_repeat);
-  TestTemplatedWeights<double>(FLAGS_repeat);
+  TestTemplatedWeights<float>(FLAGS_seed, FLAGS_repeat);
+  TestTemplatedWeights<double>(FLAGS_seed, FLAGS_repeat);
   FLAGS_fst_weight_parentheses = "";
 
   // Makes sure type names for templated weights are consistent.
-  CHECK(TropicalWeight::Type() == "tropical");
+  CHECK_EQ(TropicalWeight::Type(), "tropical");
   CHECK(TropicalWeightTpl<double>::Type() != TropicalWeightTpl<float>::Type());
-  CHECK(LogWeight::Type() == "log");
+  CHECK_EQ(LogWeight::Type(), "log");
   CHECK(LogWeightTpl<double>::Type() != LogWeightTpl<float>::Type());
+  CHECK_EQ(RealWeight::Type(), "real");
+  CHECK(RealWeightTpl<double>::Type() != RealWeightTpl<float>::Type());
   TropicalWeightTpl<double> w(2.0);
   TropicalWeight tw(2.0);
   CHECK_EQ(w.Value(), tw.Value());
 
   TestAdder<TropicalWeight>(1000);
   TestAdder<LogWeight>(1000);
+  TestAdder<RealWeight>(1000);
   TestSignedAdder<SignedLogWeight>(1000);
 
-  TestImplicitConversion<LogWeight>();
   TestImplicitConversion<TropicalWeight>();
+  TestImplicitConversion<LogWeight>();
+  TestImplicitConversion<RealWeight>();
   TestImplicitConversion<MinMaxWeight>();
 
   TestWeightConversion<TropicalWeight, LogWeight>(2.0);
 
   using LeftStringWeight = StringWeight<int>;
   using LeftStringWeightGenerate = WeightGenerate<LeftStringWeight>;
-  LeftStringWeightGenerate left_string_generate;
+  LeftStringWeightGenerate left_string_generate(FLAGS_seed);
   WeightTester<LeftStringWeight, LeftStringWeightGenerate> left_string_tester(
       left_string_generate);
   left_string_tester.Test(FLAGS_repeat);
 
   using RightStringWeight = StringWeight<int, STRING_RIGHT>;
   using RightStringWeightGenerate = WeightGenerate<RightStringWeight>;
-  RightStringWeightGenerate right_string_generate;
+  RightStringWeightGenerate right_string_generate(FLAGS_seed);
   WeightTester<RightStringWeight, RightStringWeightGenerate>
       right_string_tester(right_string_generate);
   right_string_tester.Test(FLAGS_repeat);
@@ -328,16 +333,14 @@ int main(int argc, char **argv) {
 
   using IUSetWeight = SetWeight<int, SET_INTERSECT_UNION>;
   using IUSetWeightGenerate = WeightGenerate<IUSetWeight>;
-  IUSetWeightGenerate iu_set_generate;
-  WeightTester<IUSetWeight, IUSetWeightGenerate>
-      iu_set_tester(iu_set_generate);
+  IUSetWeightGenerate iu_set_generate(FLAGS_seed);
+  WeightTester<IUSetWeight, IUSetWeightGenerate> iu_set_tester(iu_set_generate);
   iu_set_tester.Test(FLAGS_repeat);
 
   using UISetWeight = SetWeight<int, SET_UNION_INTERSECT>;
   using UISetWeightGenerate = WeightGenerate<UISetWeight>;
-  UISetWeightGenerate ui_set_generate;
-  WeightTester<UISetWeight, UISetWeightGenerate>
-      ui_set_tester(ui_set_generate);
+  UISetWeightGenerate ui_set_generate(FLAGS_seed);
+  WeightTester<UISetWeight, UISetWeightGenerate> ui_set_tester(ui_set_generate);
   ui_set_tester.Test(FLAGS_repeat);
 
   // SET_INTERSECT_UNION_RESTRICT not tested since it requires equal sets,
@@ -345,9 +348,9 @@ int main(int argc, char **argv) {
 
   using BoolSetWeight = SetWeight<int, SET_BOOLEAN>;
   using BoolSetWeightGenerate = WeightGenerate<BoolSetWeight>;
-  BoolSetWeightGenerate bool_set_generate;
-  WeightTester<BoolSetWeight, BoolSetWeightGenerate>
-      bool_set_tester(bool_set_generate);
+  BoolSetWeightGenerate bool_set_generate(FLAGS_seed);
+  WeightTester<BoolSetWeight, BoolSetWeightGenerate> bool_set_tester(
+      bool_set_generate);
   bool_set_tester.Test(FLAGS_repeat);
 
   TestWeightConversion<IUSetWeight, UISetWeight>(iu_set_generate());
@@ -370,20 +373,21 @@ int main(int argc, char **argv) {
 
   using TropicalGallicWeight = GallicWeight<int, TropicalWeight>;
   using TropicalGallicWeightGenerate = WeightGenerate<TropicalGallicWeight>;
-  TropicalGallicWeightGenerate tropical_gallic_generate(true);
+  TropicalGallicWeightGenerate tropical_gallic_generate(FLAGS_seed, true);
   WeightTester<TropicalGallicWeight, TropicalGallicWeightGenerate>
       tropical_gallic_tester(tropical_gallic_generate);
 
   using TropicalGenGallicWeight = GallicWeight<int, TropicalWeight, GALLIC>;
   using TropicalGenGallicWeightGenerate =
       WeightGenerate<TropicalGenGallicWeight>;
-  TropicalGenGallicWeightGenerate tropical_gen_gallic_generate(false);
+  TropicalGenGallicWeightGenerate tropical_gen_gallic_generate(FLAGS_seed,
+                                                               false);
   WeightTester<TropicalGenGallicWeight, TropicalGenGallicWeightGenerate>
       tropical_gen_gallic_tester(tropical_gen_gallic_generate);
 
   using TropicalProductWeight = ProductWeight<TropicalWeight, TropicalWeight>;
   using TropicalProductWeightGenerate = WeightGenerate<TropicalProductWeight>;
-  TropicalProductWeightGenerate tropical_product_generate;
+  TropicalProductWeightGenerate tropical_product_generate(FLAGS_seed);
   WeightTester<TropicalProductWeight, TropicalProductWeightGenerate>
       tropical_product_tester(tropical_product_generate);
 
@@ -391,14 +395,14 @@ int main(int argc, char **argv) {
       LexicographicWeight<TropicalWeight, TropicalWeight>;
   using TropicalLexicographicWeightGenerate =
       WeightGenerate<TropicalLexicographicWeight>;
-  TropicalLexicographicWeightGenerate tropical_lexicographic_generate;
-  WeightTester<TropicalLexicographicWeight,
-               TropicalLexicographicWeightGenerate>
+  TropicalLexicographicWeightGenerate tropical_lexicographic_generate(
+      FLAGS_seed);
+  WeightTester<TropicalLexicographicWeight, TropicalLexicographicWeightGenerate>
       tropical_lexicographic_tester(tropical_lexicographic_generate);
 
   using TropicalCubeWeight = PowerWeight<TropicalWeight, 3>;
   using TropicalCubeWeightGenerate = WeightGenerate<TropicalCubeWeight>;
-  TropicalCubeWeightGenerate tropical_cube_generate;
+  TropicalCubeWeightGenerate tropical_cube_generate(FLAGS_seed);
   WeightTester<TropicalCubeWeight, TropicalCubeWeightGenerate>
       tropical_cube_tester(tropical_cube_generate);
 
@@ -406,7 +410,7 @@ int main(int argc, char **argv) {
       ProductWeight<TropicalProductWeight, TropicalWeight>;
   using FirstNestedProductWeightGenerate =
       WeightGenerate<FirstNestedProductWeight>;
-  FirstNestedProductWeightGenerate first_nested_product_generate;
+  FirstNestedProductWeightGenerate first_nested_product_generate(FLAGS_seed);
   WeightTester<FirstNestedProductWeight, FirstNestedProductWeightGenerate>
       first_nested_product_tester(first_nested_product_generate);
 
@@ -414,14 +418,14 @@ int main(int argc, char **argv) {
       ProductWeight<TropicalWeight, TropicalProductWeight>;
   using SecondNestedProductWeightGenerate =
       WeightGenerate<SecondNestedProductWeight>;
-  SecondNestedProductWeightGenerate second_nested_product_generate;
+  SecondNestedProductWeightGenerate second_nested_product_generate(FLAGS_seed);
   WeightTester<SecondNestedProductWeight, SecondNestedProductWeightGenerate>
       second_nested_product_tester(second_nested_product_generate);
 
   using NestedProductCubeWeight = PowerWeight<FirstNestedProductWeight, 3>;
   using NestedProductCubeWeightGenerate =
       WeightGenerate<NestedProductCubeWeight>;
-  NestedProductCubeWeightGenerate nested_product_cube_generate;
+  NestedProductCubeWeightGenerate nested_product_cube_generate(FLAGS_seed);
   WeightTester<NestedProductCubeWeight, NestedProductCubeWeightGenerate>
       nested_product_cube_tester(nested_product_cube_generate);
 
@@ -429,21 +433,22 @@ int main(int argc, char **argv) {
       SparsePowerWeight<NestedProductCubeWeight, size_t>;
   using SparseNestedProductCubeWeightGenerate =
       WeightGenerate<SparseNestedProductCubeWeight>;
-  SparseNestedProductCubeWeightGenerate sparse_nested_product_cube_generate;
+  SparseNestedProductCubeWeightGenerate sparse_nested_product_cube_generate(
+      FLAGS_seed);
   WeightTester<SparseNestedProductCubeWeight,
                SparseNestedProductCubeWeightGenerate>
       sparse_nested_product_cube_tester(sparse_nested_product_cube_generate);
 
   using LogSparsePowerWeight = SparsePowerWeight<LogWeight, size_t>;
   using LogSparsePowerWeightGenerate = WeightGenerate<LogSparsePowerWeight>;
-  LogSparsePowerWeightGenerate log_sparse_power_generate;
+  LogSparsePowerWeightGenerate log_sparse_power_generate(FLAGS_seed);
   WeightTester<LogSparsePowerWeight, LogSparsePowerWeightGenerate>
       log_sparse_power_tester(log_sparse_power_generate);
 
   using LogLogExpectationWeight = ExpectationWeight<LogWeight, LogWeight>;
   using LogLogExpectationWeightGenerate =
       WeightGenerate<LogLogExpectationWeight>;
-  LogLogExpectationWeightGenerate log_log_expectation_generate;
+  LogLogExpectationWeightGenerate log_log_expectation_generate(FLAGS_seed);
   WeightTester<LogLogExpectationWeight, LogLogExpectationWeightGenerate>
       log_log_expectation_tester(log_log_expectation_generate);
 
@@ -451,7 +456,8 @@ int main(int argc, char **argv) {
       ExpectationWeight<LogWeight, LogSparsePowerWeight>;
   using LogLogSparseExpectationWeightGenerate =
       WeightGenerate<LogLogSparseExpectationWeight>;
-  LogLogSparseExpectationWeightGenerate log_log_sparse_expectation_generate;
+  LogLogSparseExpectationWeightGenerate log_log_sparse_expectation_generate(
+      FLAGS_seed);
   WeightTester<LogLogSparseExpectationWeight,
                LogLogSparseExpectationWeightGenerate>
       log_log_sparse_expectation_tester(log_log_sparse_expectation_generate);
@@ -471,7 +477,7 @@ int main(int argc, char **argv) {
 
   using TropicalUnionWeight = UnionWeight<TropicalWeight, UnionWeightOptions>;
   using TropicalUnionWeightGenerate = WeightGenerate<TropicalUnionWeight>;
-  TropicalUnionWeightGenerate tropical_union_generate;
+  TropicalUnionWeightGenerate tropical_union_generate(FLAGS_seed);
   WeightTester<TropicalUnionWeight, TropicalUnionWeightGenerate>
       tropical_union_tester(tropical_union_generate);
 
@@ -517,8 +523,6 @@ int main(int argc, char **argv) {
   TestSparsePowerWeightGetSetValue();
 
   TestFloatEqualityIsReflexive();
-
-  std::cout << "PASS" << std::endl;
 
   return 0;
 }

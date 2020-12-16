@@ -1,14 +1,12 @@
-AC_INIT([OpenFst], [1.7.1], [help@www.openfst.org])
+AC_INIT([OpenFst], [1.7.9], [help@www.openfst.org])
 AM_INIT_AUTOMAKE([foreign nostdinc -Wall -Werror subdir-objects])
 AM_PROG_AR
 
-# OpenFst does not throw exceptions, so we do not generate exception handling
-# code. However, users are free to re-enable exception handling.
-# OpenFst assumes char is unsigned; -fsigned-char is likely unsafe.
-CPPFLAGS="$CPPFLAGS -fno-exceptions -funsigned-char"
-CXXFLAGS="$CXXFLAGS -std=c++11"
-
 AC_PROG_CXX
+# This library does not throw exceptions, so we do not generate exception
+# handling code. However, users are free to re-enable exception handling.
+CXX="$CXX -std=c++11 -fno-exceptions"
+
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 
@@ -107,8 +105,8 @@ AC_ARG_ENABLE([python],
               [enable_python=no])
 AM_CONDITIONAL([HAVE_PYTHON], [test "x$enable_python" != xno])
 if test "x$enable_python" != xno; then
-  AM_PATH_PYTHON(2.7)
-  AC_PYTHON_DEVEL([>= '2.7'])
+  AM_PATH_PYTHON(3.6)
+  AC_PYTHON_DEVEL([>= '3.6'])
 fi
 
 AC_ARG_ENABLE([special],
@@ -127,7 +125,17 @@ AC_ARG_ENABLE([bin],
 AM_CONDITIONAL([HAVE_BIN], [test "x$enable_bin" != xno])
 AM_CONDITIONAL([HAVE_SCRIPT], [test "x$enable_bin" != xno])
 
-# --enable-grm enables dependencies of OpenGrm: far, mpdt, and pdt.
+# --enable-fsts is an alias to enable FST SO extensions: compact, const,
+# linear, lookahead, and ngram.
+AC_ARG_ENABLE([fsts],
+              [AS_HELP_STRING([--enable-fsts],
+              [enable all FST SOs])],
+              [],
+              [enable_fsts=no])
+AM_CONDITIONAL([HAVE_FSTS], [test "x$enable_fsts" != xno])
+
+# --enable-grm is an alias to enable all dependencies of OpenGrm: far, mpdt,
+# and pdt.
 AC_ARG_ENABLE([grm],
               [AS_HELP_STRING([--enable-grm],
               [enable all dependencies of OpenGrm])],

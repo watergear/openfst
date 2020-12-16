@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <fst/flags.h>
+#include <fst/types.h>
 #include <fst/log.h>
 
 #include <fst/weight.h>
@@ -71,8 +72,7 @@ class TupleWeight {
   }
 
   bool Member() const {
-    return std::all_of(values_.begin(), values_.end(),
-                       std::mem_fn(&W::Member));
+    return std::all_of(values_.begin(), values_.end(), std::mem_fn(&W::Member));
   }
 
   size_t Hash() const {

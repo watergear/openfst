@@ -9,21 +9,20 @@
 
 #include <fst/flags.h>
 #include <fst/extensions/far/far.h>
+#include <fst/string.h>
 
 namespace fst {
 namespace script {
 
-FarType GetFarType(const string &str);
+bool GetFarType(const std::string &str, FarType *far_type);
 
-bool GetFarEntryType(const string &str, FarEntryType *entry_type);
-
-bool GetFarTokenType(const string &str, FarTokenType *token_type);
+bool GetFarEntryType(const std::string &str, FarEntryType *entry_type);
 
 void ExpandArgs(int argc, char **argv, int *argcp, char ***argvp);
 
 }  // namespace script
 
-string GetFarTypeString(FarType type);
+std::string GetFarTypeString(FarType far_type);
 
 }  // namespace fst
 

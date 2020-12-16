@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <vector>
 
+#include <fst/types.h>
+
 #include <fst/mutable-fst.h>
 #include <fst/rational.h>
 
@@ -30,8 +32,6 @@ namespace fst {
 // where V is the number of states.
 template <class Arc>
 void Closure(MutableFst<Arc> *fst, ClosureType closure_type) {
-  using Label = typename Arc::Label;
-  using StateId = typename Arc::StateId;
   using Weight = typename Arc::Weight;
   const auto props = fst->Properties(kFstProperties, false);
   const auto start = fst->Start();
@@ -45,8 +45,8 @@ void Closure(MutableFst<Arc> *fst, ClosureType closure_type) {
     fst->ReserveStates(fst->NumStates() + 1);
     const auto nstart = fst->AddState();
     fst->SetStart(nstart);
-    fst->SetFinal(nstart, Weight::One());
-    if (start != kNoLabel) fst->AddArc(nstart, Arc(0, 0, Weight::One(), start));
+    fst->SetFinal(nstart);
+    if (start != kNoLabel) fst->AddArc(nstart, Arc(0, 0, start));
   }
   fst->SetProperties(ClosureProperties(props, closure_type == CLOSURE_STAR),
                      kFstProperties);
@@ -62,8 +62,8 @@ void Closure(RationalFst<Arc> *fst, ClosureType closure_type) {
 struct ClosureFstOptions : RationalFstOptions {
   ClosureType type;
 
-  ClosureFstOptions(const RationalFstOptions &opts,
-                    ClosureType type = CLOSURE_STAR)
+  explicit ClosureFstOptions(const RationalFstOptions &opts,
+                             ClosureType type = CLOSURE_STAR)
       : RationalFstOptions(opts), type(type) {}
 
   explicit ClosureFstOptions(ClosureType type = CLOSURE_STAR) : type(type) {}
@@ -97,12 +97,12 @@ class ClosureFst : public RationalFst<A> {
   }
 
   // See Fst<>::Copy() for doc.
-  ClosureFst(const ClosureFst<Arc> &fst, bool safe = false)
+  ClosureFst(const ClosureFst &fst, bool safe = false)
       : RationalFst<A>(fst, safe) {}
 
   // Gets a copy of this ClosureFst. See Fst<>::Copy() for further doc.
-  ClosureFst<A> *Copy(bool safe = false) const override {
-    return new ClosureFst<A>(*this, safe);
+  ClosureFst *Copy(bool safe = false) const override {
+    return new ClosureFst(*this, safe);
   }
 
  private:

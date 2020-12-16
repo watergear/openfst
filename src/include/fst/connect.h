@@ -10,10 +10,11 @@
 #include <memory>
 #include <vector>
 
+#include <fst/types.h>
+
 #include <fst/dfs-visit.h>
 #include <fst/mutable-fst.h>
 #include <fst/union-find.h>
-
 
 namespace fst {
 
@@ -148,7 +149,7 @@ class SccVisitor {
   void FinishVisit() {
     // Numbers SCCs in topological order when acyclic.
     if (scc_) {
-      for (StateId s = 0; s < scc_->size(); ++s) {
+      for (size_t s = 0; s < scc_->size(); ++s) {
         (*scc_)[s] = nscc_ - 1 - (*scc_)[s];
       }
     }
@@ -194,22 +195,22 @@ inline void SccVisitor<Arc>::InitVisit(const Fst<Arc> &fst) {
   start_ = fst.Start();
   nstates_ = 0;
   nscc_ = 0;
-  dfnumber_.reset(new std::vector<StateId>());
-  lowlink_.reset(new std::vector<StateId>());
-  onstack_.reset(new std::vector<bool>());
-  scc_stack_.reset(new std::vector<StateId>());
+  dfnumber_ = fst::make_unique<std::vector<StateId>>();
+  lowlink_ = fst::make_unique<std::vector<StateId>>();
+  onstack_ = fst::make_unique<std::vector<bool>>();
+  scc_stack_ = fst::make_unique<std::vector<StateId>>();
 }
 
 template <class Arc>
 inline bool SccVisitor<Arc>::InitState(StateId s, StateId root) {
   scc_stack_->push_back(s);
-  while (dfnumber_->size() <= s) {
-    if (scc_) scc_->push_back(-1);
-    if (access_) access_->push_back(false);
-    coaccess_->push_back(false);
-    dfnumber_->push_back(-1);
-    lowlink_->push_back(-1);
-    onstack_->push_back(false);
+  if (static_cast<StateId>(dfnumber_->size()) <= s) {
+    if (scc_) scc_->resize(s + 1, -1);
+    if (access_) access_->resize(s + 1, false);
+    coaccess_->resize(s + 1, false);
+    dfnumber_->resize(s + 1, -1);
+    lowlink_->resize(s + 1, -1);
+    onstack_->resize(s + 1, false);
   }
   (*dfnumber_)[s] = nstates_;
   (*lowlink_)[s] = nstates_;
@@ -273,6 +274,7 @@ void Connect(MutableFst<Arc> *fst) {
   SccVisitor<Arc> scc_visitor(nullptr, &access, &coaccess, &props);
   DfsVisit(*fst, &scc_visitor);
   std::vector<StateId> dstates;
+  dstates.reserve(access.size());
   for (StateId s = 0; s < access.size(); ++s) {
     if (!access[s] || !coaccess[s]) dstates.push_back(s);
   }

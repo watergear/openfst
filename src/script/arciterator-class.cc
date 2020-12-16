@@ -2,6 +2,7 @@
 // finite-state transducer library.
 
 #include <fst/script/arciterator-class.h>
+
 #include <fst/script/script-impl.h>
 
 namespace fst {
@@ -14,24 +15,17 @@ ArcIteratorClass::ArcIteratorClass(const FstClass &fst, int64 s)
                                              fst.ArcType(), &args);
 }
 
-MutableArcIteratorClass::MutableArcIteratorClass(MutableFstClass *fst,
-                                                 int64 s) : impl_(nullptr) {
+MutableArcIteratorClass::MutableArcIteratorClass(MutableFstClass *fst, int64 s)
+    : impl_(nullptr) {
   InitMutableArcIteratorClassArgs args(fst, s, this);
   Apply<Operation<InitMutableArcIteratorClassArgs>>(
       "InitMutableArcIteratorClass", fst->ArcType(), &args);
 }
 
-REGISTER_FST_OPERATION(InitArcIteratorClass, StdArc, InitArcIteratorClassArgs);
-REGISTER_FST_OPERATION(InitArcIteratorClass, LogArc, InitArcIteratorClassArgs);
-REGISTER_FST_OPERATION(InitArcIteratorClass, Log64Arc,
-                       InitArcIteratorClassArgs);
+REGISTER_FST_OPERATION_3ARCS(InitArcIteratorClass, InitArcIteratorClassArgs);
 
-REGISTER_FST_OPERATION(InitMutableArcIteratorClass, StdArc,
-                       InitMutableArcIteratorClassArgs);
-REGISTER_FST_OPERATION(InitMutableArcIteratorClass, LogArc,
-                       InitMutableArcIteratorClassArgs);
-REGISTER_FST_OPERATION(InitMutableArcIteratorClass, Log64Arc,
-                       InitMutableArcIteratorClassArgs);
+REGISTER_FST_OPERATION_3ARCS(InitMutableArcIteratorClass,
+                             InitMutableArcIteratorClassArgs);
 
 }  // namespace script
 }  // namespace fst

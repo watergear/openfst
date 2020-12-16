@@ -6,7 +6,10 @@
 #ifndef FST_POWER_WEIGHT_H_
 #define FST_POWER_WEIGHT_H_
 
+#include <random>
 #include <string>
+
+#include <fst/types.h>
 
 #include <fst/tuple-weight.h>
 #include <fst/weight.h>
@@ -57,9 +60,9 @@ class PowerWeight : public TupleWeight<W, n> {
     return no_weight;
   }
 
-  static const string &Type() {
-    static const string *const type =
-        new string(W::Type() + "_^" + std::to_string(n));
+  static const std::string &Type() {
+    static const std::string *const type =
+        new std::string(W::Type() + "_^" + std::to_string(n));
     return *type;
   }
 
@@ -151,7 +154,9 @@ class WeightGenerate<PowerWeight<W, n>> {
   using Weight = PowerWeight<W, n>;
   using Generate = WeightGenerate<W>;
 
-  explicit WeightGenerate(bool allow_zero = true) : generate_(allow_zero) {}
+  explicit WeightGenerate(uint64 seed = std::random_device()(),
+                          bool allow_zero = true)
+      : generate_(seed, allow_zero) {}
 
   Weight operator()() const {
     Weight result;
@@ -160,7 +165,7 @@ class WeightGenerate<PowerWeight<W, n>> {
   }
 
  private:
-  Generate generate_;
+  const Generate generate_;
 };
 
 }  // namespace fst

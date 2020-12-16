@@ -13,6 +13,7 @@
 
 #include <fst/compat.h>
 #include <fst/log.h>
+#include <fst/extensions/linear/linear-fst-data.h>
 #include <fst/extensions/pdt/collection.h>
 #include <fst/bi-table.h>
 #include <fst/cache.h>
@@ -20,8 +21,6 @@
 #include <fst/fst.h>
 #include <fst/matcher.h>
 #include <fst/symbol-table.h>
-
-#include <fst/extensions/linear/linear-fst-data.h>
 
 namespace fst {
 
@@ -270,13 +269,13 @@ class LinearTaggerFstImpl : public CacheImpl<A> {
 
   std::shared_ptr<const LinearFstData<A>> data_;
   size_t delay_;
-  // Mapping from internal state tuple to *non-consecutive* ids
+  // Mapping from internal state tuple to *non-consecutive* IDs.
   Collection<StateId, Label> ngrams_;
-  // Mapping from non-consecutive id to actual state id
+  // Mapping from non-consecutive id to actual state ID.
   CompactHashBiTable<StateId, StateId, std::hash<StateId>> condensed_;
-  // Two frequently used vectors, reuse to avoid repeated heap
-  // allocation
-  std::vector<Label> state_stub_, next_stub_;
+  // Two frequently used vectors, reuse to avoid repeated heap allocation.
+  std::vector<Label> state_stub_;
+  std::vector<Label> next_stub_;
 
   LinearTaggerFstImpl &operator=(const LinearTaggerFstImpl &) = delete;
 };
@@ -335,8 +334,8 @@ inline void LinearTaggerFstImpl<A>::ExpandArcs(StateId s,
                        next_stub_));
   } else {
     std::pair<typename std::vector<typename A::Label>::const_iterator,
-              typename std::vector<typename A::Label>::const_iterator> range =
-        data_->PossibleOutputLabels(obs_ilabel);
+              typename std::vector<typename A::Label>::const_iterator>
+        range = data_->PossibleOutputLabels(obs_ilabel);
     for (typename std::vector<typename A::Label>::const_iterator it =
              range.first;
          it != range.second; ++it)
@@ -361,8 +360,8 @@ inline void LinearTaggerFstImpl<A>::AppendArcs(StateId /*s*/,
         MakeArc(state, ilabel, LinearFstData<A>::kStartOfSentence, next_stub_));
   } else {
     std::pair<typename std::vector<typename A::Label>::const_iterator,
-              typename std::vector<typename A::Label>::const_iterator> range =
-        data_->PossibleOutputLabels(obs_ilabel);
+              typename std::vector<typename A::Label>::const_iterator>
+        range = data_->PossibleOutputLabels(obs_ilabel);
     for (typename std::vector<typename A::Label>::const_iterator it =
              range.first;
          it != range.second; ++it)
@@ -390,10 +389,12 @@ void LinearTaggerFstImpl<A>::Expand(StateId s) {
 
   // Non-epsilon input when we haven't flushed
   if (delay_ == 0 ||
-      *(BufferEnd(state_stub_) - 1) != LinearFstData<A>::kEndOfSentence)
+      *(BufferEnd(state_stub_) - 1) != LinearFstData<A>::kEndOfSentence) {
     for (Label ilabel = data_->MinInputLabel();
-         ilabel <= data_->MaxInputLabel(); ++ilabel)
+         ilabel <= data_->MaxInputLabel(); ++ilabel) {
       ExpandArcs(s, state_stub_, ilabel, &next_stub_);
+    }
+  }
 
   SetArcs(s);
 }
@@ -493,15 +494,15 @@ class LinearTaggerFst : public ImplToFst<internal::LinearTaggerFstImpl<A>> {
     return new LinearFstMatcherTpl<LinearTaggerFst<A>>(this, match_type);
   }
 
-  static LinearTaggerFst<A> *Read(const string &filename) {
-    if (!filename.empty()) {
-      std::ifstream strm(filename,
+  static LinearTaggerFst<A> *Read(const std::string &source) {
+    if (!source.empty()) {
+      std::ifstream strm(source,
                               std::ios_base::in | std::ios_base::binary);
       if (!strm) {
-        LOG(ERROR) << "LinearTaggerFst::Read: Can't open file: " << filename;
+        LOG(ERROR) << "LinearTaggerFst::Read: Can't open file: " << source;
         return nullptr;
       }
-      return Read(strm, FstReadOptions(filename));
+      return Read(strm, FstReadOptions(source));
     } else {
       return Read(std::cin, FstReadOptions("standard input"));
     }
@@ -513,15 +514,15 @@ class LinearTaggerFst : public ImplToFst<internal::LinearTaggerFstImpl<A>> {
     return impl ? new LinearTaggerFst<A>(std::shared_ptr<Impl>(impl)) : nullptr;
   }
 
-  bool Write(const string &filename) const override {
-    if (!filename.empty()) {
-      std::ofstream strm(filename,
+  bool Write(const std::string &source) const override {
+    if (!source.empty()) {
+      std::ofstream strm(source,
                                std::ios_base::out | std::ios_base::binary);
       if (!strm) {
-        LOG(ERROR) << "LinearTaggerFst::Write: Can't open file: " << filename;
+        LOG(ERROR) << "LinearTaggerFst::Write: Can't open file: " << source;
         return false;
       }
-      return Write(strm, FstWriteOptions(filename));
+      return Write(strm, FstWriteOptions(source));
     } else {
       return Write(std::cout, FstWriteOptions("standard output"));
     }
@@ -778,22 +779,22 @@ class LinearClassifierFstImpl : public CacheImpl<A> {
   void FillState(StateId s, std::vector<Label> *output) {
     s = condensed_.FindEntry(s);
     for (NGramIterator it = ngrams_.FindSet(s); !it.Done(); it.Next()) {
-      Label label = it.Element();
-      output->push_back(label);
+      output->emplace_back(it.Element());
     }
   }
 
   std::shared_ptr<const LinearFstData<A>> data_;
   // Division of groups in `data_`; num_classes_ * num_groups_ ==
   // data_->NumGroups().
-  size_t num_classes_, num_groups_;
-  // Mapping from internal state tuple to *non-consecutive* ids
+  size_t num_classes_;
+  size_t num_groups_;
+  // Mapping from internal state tuple to *non-consecutive* IDs.
   Collection<StateId, Label> ngrams_;
-  // Mapping from non-consecutive id to actual state id
+  // Mapping from non-consecutive id to actual state ID.
   CompactHashBiTable<StateId, StateId, std::hash<StateId>> condensed_;
-  // Two frequently used vectors, reuse to avoid repeated heap
-  // allocation
-  std::vector<Label> state_stub_, next_stub_;
+  // Two frequently used vectors, reuse to avoid repeated heap allocation.
+  std::vector<Label> state_stub_;
+  std::vector<Label> next_stub_;
 
   void operator=(const LinearClassifierFstImpl<A> &) = delete;
 };
@@ -950,16 +951,15 @@ class LinearClassifierFst
     return new LinearFstMatcherTpl<LinearClassifierFst<A>>(this, match_type);
   }
 
-  static LinearClassifierFst<A> *Read(const string &filename) {
-    if (!filename.empty()) {
-      std::ifstream strm(filename,
+  static LinearClassifierFst<A> *Read(const std::string &source) {
+    if (!source.empty()) {
+      std::ifstream strm(source,
                               std::ios_base::in | std::ios_base::binary);
       if (!strm) {
-        LOG(ERROR) << "LinearClassifierFst::Read: Can't open file: "
-                   << filename;
+        LOG(ERROR) << "LinearClassifierFst::Read: Can't open file: " << source;
         return nullptr;
       }
-      return Read(strm, FstReadOptions(filename));
+      return Read(strm, FstReadOptions(source));
     } else {
       return Read(std::cin, FstReadOptions("standard input"));
     }
@@ -972,15 +972,15 @@ class LinearClassifierFst
                 : nullptr;
   }
 
-  bool Write(const string &filename) const override {
-    if (!filename.empty()) {
-      std::ofstream strm(filename,
+  bool Write(const std::string &source) const override {
+    if (!source.empty()) {
+      std::ofstream strm(source,
                                std::ios_base::out | std::ios_base::binary);
       if (!strm) {
-        LOG(ERROR) << "ProdLmFst::Write: Can't open file: " << filename;
+        LOG(ERROR) << "ProdLmFst::Write: Can't open file: " << source;
         return false;
       }
-      return Write(strm, FstWriteOptions(filename));
+      return Write(strm, FstWriteOptions(source));
     } else {
       return Write(std::cout, FstWriteOptions("standard output"));
     }

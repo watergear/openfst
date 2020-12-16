@@ -10,8 +10,11 @@
 #include <unordered_set>
 #include <vector>
 
+#include <fst/types.h>
 #include <fst/extensions/pdt/pdt.h>
 #include <fst/fst.h>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace fst {
 
@@ -26,9 +29,9 @@ class PdtInfo {
   PdtInfo(const Fst<Arc> &fst,
           const std::vector<std::pair<Label, Label>> &parents);
 
-  const string &FstType() const { return fst_type_; }
+  const std::string &FstType() const { return fst_type_; }
 
-  const string &ArcType() const { return Arc::Type(); }
+  const std::string &ArcType() const { return Arc::Type(); }
 
   int64 NumStates() const { return nstates_; }
 
@@ -47,7 +50,7 @@ class PdtInfo {
   int64 NumCloseParenStates() const { return nclose_paren_states_; }
 
  private:
-  string fst_type_;
+  std::string fst_type_;
   int64 nstates_;
   int64 narcs_;
   int64 nopen_parens_;
@@ -93,23 +96,19 @@ PdtInfo<Arc>::PdtInfo(
         const auto close_paren = parens[it->second].second;
         if (arc.ilabel == open_paren) {
           ++nopen_parens_;
-          if (!paren_set.count(open_paren)) {
+          if (paren_set.insert(open_paren).second) {
             ++nuniq_open_parens_;
-            paren_set.insert(open_paren);
           }
-          if (!open_paren_state_set.count(arc.nextstate)) {
+          if (open_paren_state_set.insert(arc.nextstate).second) {
             ++nopen_paren_states_;
-            open_paren_state_set.insert(arc.nextstate);
           }
         } else {
           ++nclose_parens_;
-          if (!paren_set.count(close_paren)) {
+          if (paren_set.insert(close_paren).second) {
             ++nuniq_close_parens_;
-            paren_set.insert(close_paren);
           }
-          if (!close_paren_state_set.count(s)) {
+          if (close_paren_state_set.insert(s).second) {
             ++nclose_paren_states_;
-            close_paren_state_set.insert(s);
           }
         }
       }

@@ -6,6 +6,8 @@
 #ifndef FST_INVERT_H_
 #define FST_INVERT_H_
 
+#include <fst/types.h>
+
 #include <fst/arc-map.h>
 #include <fst/mutable-fst.h>
 
@@ -24,9 +26,7 @@ struct InvertMapper {
     return ToArc(arc.olabel, arc.ilabel, arc.weight, arc.nextstate);
   }
 
-  constexpr MapFinalAction FinalAction() const {
-     return MAP_NO_SUPERFINAL;
-  }
+  constexpr MapFinalAction FinalAction() const { return MAP_NO_SUPERFINAL; }
 
   constexpr MapSymbolsAction InputSymbolsAction() const {
     return MAP_CLEAR_SYMBOLS;
@@ -36,9 +36,7 @@ struct InvertMapper {
     return MAP_CLEAR_SYMBOLS;
   }
 
-  uint64 Properties(uint64 props) const {
-    return InvertProperties(props);
-  }
+  uint64 Properties(uint64 props) const { return InvertProperties(props); }
 };
 
 // Inverts the transduction corresponding to an FST by exchanging the
@@ -99,11 +97,11 @@ class InvertFst : public ArcMapFst<A, A, InvertMapper<A>> {
   }
 
   // See Fst<>::Copy() for doc.
-  InvertFst(const InvertFst<Arc> &fst, bool safe = false)
+  InvertFst(const InvertFst &fst, bool safe = false)
       : ArcMapFst<Arc, Arc, Mapper>(fst, safe) {}
 
   // Get a copy of this InvertFst. See Fst<>::Copy() for further doc.
-  InvertFst<Arc> *Copy(bool safe = false) const override {
+  InvertFst *Copy(bool safe = false) const override {
     return new InvertFst(*this, safe);
   }
 

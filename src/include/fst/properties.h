@@ -7,9 +7,12 @@
 #define FST_PROPERTIES_H_
 
 #include <sys/types.h>
+
 #include <vector>
 
 #include <fst/compat.h>
+#include <fst/types.h>
+#include <fst/log.h>
 
 namespace fst {
 
@@ -119,10 +122,10 @@ constexpr uint64 kString = 0x0000100000000000ULL;
 // Not a string FST.
 constexpr uint64 kNotString = 0x0000200000000000ULL;
 
-// FST has least one weighted cycle.
+// FST has at least one weighted cycle.
 constexpr uint64 kWeightedCycles = 0x0000400000000000ULL;
 
-// Only unweighted cycles.
+// FST has no weighted cycles. Any cycles that may be present are unweighted.
 constexpr uint64 kUnweightedCycles = 0x0000800000000000ULL;
 
 // COMPOSITE PROPERTIES
@@ -133,6 +136,12 @@ constexpr uint64 kNullProperties =
     kNoOEpsilons | kILabelSorted | kOLabelSorted | kUnweighted | kAcyclic |
     kInitialAcyclic | kTopSorted | kAccessible | kCoAccessible | kString |
     kUnweightedCycles;
+
+// Properties of a string FST compiled into a string.
+constexpr uint64 kCompiledStringProperties =
+    kAcceptor | kString | kUnweighted | kIDeterministic | kODeterministic |
+    kILabelSorted | kOLabelSorted | kAcyclic | kInitialAcyclic |
+    kUnweightedCycles | kTopSorted | kAccessible | kCoAccessible;
 
 // Properties that are preserved when an FST is copied.
 constexpr uint64 kCopyProperties =
@@ -290,12 +299,12 @@ constexpr uint64 kTrinaryProperties = 0x0000ffffffff0000ULL;
 // COMPUTED PROPERTIES
 
 // 1st bit of trinary properties.
-constexpr uint64 kPosTrinaryProperties = kTrinaryProperties &
-    0x5555555555555555ULL;
+constexpr uint64 kPosTrinaryProperties =
+    kTrinaryProperties & 0x5555555555555555ULL;
 
 // 2nd bit of trinary properties.
-constexpr uint64 kNegTrinaryProperties = kTrinaryProperties &
-    0xaaaaaaaaaaaaaaaaULL;
+constexpr uint64 kNegTrinaryProperties =
+    kTrinaryProperties & 0xaaaaaaaaaaaaaaaaULL;
 
 // All properties.
 constexpr uint64 kFstProperties = kBinaryProperties | kTrinaryProperties;
@@ -343,7 +352,7 @@ uint64 RandGenProperties(uint64 inprops, bool weighted);
 
 uint64 RelabelProperties(uint64 inprops);
 
-uint64 ReplaceProperties(const std::vector<uint64> &inprops, ssize_t root,
+uint64 ReplaceProperties(const std::vector<uint64> &inprops, size_t root,
                          bool epsilon_on_call, bool epsilon_on_return,
                          bool out_epsilon_on_call, bool out_epsilon_on_return,
                          bool replace_transducer, bool no_empty_fst,
@@ -414,8 +423,8 @@ uint64 SetFinalProperties(uint64 inprops, const Weight &old_weight,
 /// \param prev_arc the previously-added (or "last") arc of state s, or nullptr
 //                  if s currently has no arcs.
 template <typename Arc>
-uint64 AddArcProperties(uint64 inprops, typename Arc::StateId s,
-                        const Arc &arc, const Arc *prev_arc) {
+uint64 AddArcProperties(uint64 inprops, typename Arc::StateId s, const Arc &arc,
+                        const Arc *prev_arc) {
   using Weight = typename Arc::Weight;
   auto outprops = inprops;
   if (arc.ilabel != arc.olabel) {
@@ -463,6 +472,39 @@ uint64 AddArcProperties(uint64 inprops, typename Arc::StateId s,
 
 extern const char *PropertyNames[];
 
+namespace internal {
+
+// For a binary property, the bit is always returned set. For a trinary (i.e.,
+// two-bit) property, both bits are returned set iff either corresponding input
+// bit is set.
+inline uint64 KnownProperties(uint64 props) {
+  return kBinaryProperties | (props & kTrinaryProperties) |
+         ((props & kPosTrinaryProperties) << 1) |
+         ((props & kNegTrinaryProperties) >> 1);
+}
+
+// Tests compatibility between two sets of properties.
+inline bool CompatProperties(uint64 props1, uint64 props2) {
+  const auto known_props1 = KnownProperties(props1);
+  const auto known_props2 = KnownProperties(props2);
+  const auto known_props = known_props1 & known_props2;
+  const auto incompat_props = (props1 & known_props) ^ (props2 & known_props);
+  if (incompat_props) {
+    uint64 prop = 1;
+    for (int i = 0; i < 64; ++i, prop <<= 1) {
+      if (prop & incompat_props) {
+        LOG(ERROR) << "CompatProperties: Mismatch: " << PropertyNames[i]
+                   << ": props1 = " << (props1 & prop ? "true" : "false")
+                   << ", props2 = " << (props2 & prop ? "true" : "false");
+      }
+    }
+    return false;
+  } else {
+    return true;
+  }
+}
+
+}  // namespace internal
 }  // namespace fst
 
 #endif  // FST_PROPERTIES_H_

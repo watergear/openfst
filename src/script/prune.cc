@@ -1,16 +1,16 @@
 // See www.openfst.org for extensive documentation on this weighted
 // finite-state transducer library.
 
-#include <fst/script/fst-class.h>
 #include <fst/script/prune.h>
+
 #include <fst/script/script-impl.h>
 
 namespace fst {
 namespace script {
 
 void Prune(const FstClass &ifst, MutableFstClass *ofst,
-           const WeightClass &weight_threshold,
-           int64 state_threshold, float delta) {
+           const WeightClass &weight_threshold, int64 state_threshold,
+           float delta) {
   if (!internal::ArcTypesMatch(ifst, *ofst, "Prune") ||
       !ofst->WeightTypesMatch(weight_threshold, "Prune")) {
     ofst->SetProperties(kError, kError);
@@ -30,13 +30,8 @@ void Prune(MutableFstClass *fst, const WeightClass &weight_threshold,
   Apply<Operation<PruneArgs2>>("Prune", fst->ArcType(), &args);
 }
 
-REGISTER_FST_OPERATION(Prune, StdArc, PruneArgs1);
-REGISTER_FST_OPERATION(Prune, LogArc, PruneArgs1);
-REGISTER_FST_OPERATION(Prune, Log64Arc, PruneArgs1);
-
-REGISTER_FST_OPERATION(Prune, StdArc, PruneArgs2);
-REGISTER_FST_OPERATION(Prune, LogArc, PruneArgs2);
-REGISTER_FST_OPERATION(Prune, Log64Arc, PruneArgs2);
+REGISTER_FST_OPERATION_3ARCS(Prune, PruneArgs1);
+REGISTER_FST_OPERATION_3ARCS(Prune, PruneArgs2);
 
 }  // namespace script
 }  // namespace fst

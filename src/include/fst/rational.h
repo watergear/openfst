@@ -11,10 +11,11 @@
 #include <string>
 #include <vector>
 
+#include <fst/types.h>
+
 #include <fst/mutable-fst.h>
 #include <fst/replace.h>
 #include <fst/test-properties.h>
-
 
 namespace fst {
 
@@ -113,7 +114,7 @@ class RationalFstImpl : public FstImpl<A> {
     rfst_.AddState();
     rfst_.AddState();
     rfst_.SetStart(0);
-    rfst_.SetFinal(1, Weight::One());
+    rfst_.SetFinal(1);
     rfst_.SetInputSymbols(fst1.InputSymbols());
     rfst_.SetOutputSymbols(fst1.OutputSymbols());
     nonterminals_ = 2;
@@ -135,7 +136,7 @@ class RationalFstImpl : public FstImpl<A> {
     rfst_.AddState();
     rfst_.AddState();
     rfst_.SetStart(0);
-    rfst_.SetFinal(2, Weight::One());
+    rfst_.SetFinal(2);
     rfst_.SetInputSymbols(fst1.InputSymbols());
     rfst_.SetOutputSymbols(fst1.OutputSymbols());
     nonterminals_ = 2;
@@ -155,13 +156,13 @@ class RationalFstImpl : public FstImpl<A> {
     if (closure_type == CLOSURE_STAR) {
       rfst_.AddState();
       rfst_.SetStart(0);
-      rfst_.SetFinal(0, Weight::One());
+      rfst_.SetFinal(0);
       rfst_.EmplaceArc(0, 0, -1, Weight::One(), 0);
     } else {
       rfst_.AddState();
       rfst_.AddState();
       rfst_.SetStart(0);
-      rfst_.SetFinal(1, Weight::One());
+      rfst_.SetFinal(1);
       rfst_.EmplaceArc(0, 0, -1, Weight::One(), 1);
       rfst_.EmplaceArc(1, 0, 0, Weight::One(), 0);
     }
@@ -182,7 +183,7 @@ class RationalFstImpl : public FstImpl<A> {
     afst.AddState();
     afst.AddState();
     afst.SetStart(0);
-    afst.SetFinal(1, Weight::One());
+    afst.SetFinal(1);
     ++nonterminals_;
     afst.EmplaceArc(0, 0, -nonterminals_, Weight::One(), 1);
     Union(&rfst_, afst);
@@ -199,7 +200,7 @@ class RationalFstImpl : public FstImpl<A> {
     afst.AddState();
     afst.AddState();
     afst.SetStart(0);
-    afst.SetFinal(1, Weight::One());
+    afst.SetFinal(1);
     ++nonterminals_;
     afst.EmplaceArc(0, 0, -nonterminals_, Weight::One(), 1);
     if (append) {
@@ -225,7 +226,8 @@ class RationalFstImpl : public FstImpl<A> {
   ReplaceFst<Arc> *Replace() const {
     if (!replace_) {
       fst_tuples_[0].second = rfst_.Copy();
-      replace_.reset(new ReplaceFst<Arc>(fst_tuples_, replace_options_));
+      replace_ =
+          fst::make_unique<ReplaceFst<Arc>>(fst_tuples_, replace_options_);
     }
     return replace_.get();
   }
@@ -277,7 +279,7 @@ class RationalFst : public ImplToFst<internal::RationalFstImpl<A>> {
       : ImplToFst<Impl>(std::make_shared<Impl>(opts)) {}
 
   // See Fst<>::Copy() for doc.
-  RationalFst(const RationalFst<Arc> &fst, bool safe = false)
+  RationalFst(const RationalFst &fst, bool safe = false)
       : ImplToFst<Impl>(fst, safe) {}
 
  private:

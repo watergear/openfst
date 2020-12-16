@@ -12,12 +12,12 @@
 namespace fst {
 namespace script {
 
-using EpsNormalizeArgs = std::tuple<const FstClass &, MutableFstClass *,
-                                    EpsNormalizeType>;
+using EpsNormalizeArgs =
+    std::tuple<const FstClass &, MutableFstClass *, EpsNormalizeType>;
 
 template <class Arc>
 void EpsNormalize(EpsNormalizeArgs *args) {
-  const Fst<Arc> &ifst = *(std::get<0>(*args).GetFst<Arc>());
+  const Fst<Arc> &ifst = *std::get<0>(*args).GetFst<Arc>();
   MutableFst<Arc> *ofst = std::get<1>(*args)->GetMutableFst<Arc>();
   EpsNormalize(ifst, ofst, std::get<2>(*args));
 }

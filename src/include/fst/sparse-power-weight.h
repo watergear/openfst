@@ -7,8 +7,10 @@
 #ifndef FST_SPARSE_POWER_WEIGHT_H_
 #define FST_SPARSE_POWER_WEIGHT_H_
 
-#include <climits>
+#include <random>
 #include <string>
+
+#include <fst/types.h>
 
 #include <fst/sparse-tuple-weight.h>
 #include <fst/weight.h>
@@ -32,48 +34,46 @@ namespace fst {
 template <class W, class K = int>
 class SparsePowerWeight : public SparseTupleWeight<W, K> {
  public:
+  using Base = SparseTupleWeight<W, K>;
   using ReverseWeight = SparsePowerWeight<typename W::ReverseWeight, K>;
 
   SparsePowerWeight() {}
 
-  explicit SparsePowerWeight(const SparseTupleWeight<W, K> &weight)
-      : SparseTupleWeight<W, K>(weight) {}
+  explicit SparsePowerWeight(const Base &weight) : Base(weight) {}
 
   template <class Iterator>
-  SparsePowerWeight(Iterator begin, Iterator end)
-      : SparseTupleWeight<W, K>(begin, end) {}
+  SparsePowerWeight(Iterator begin, Iterator end) : Base(begin, end) {}
 
   // Initialize component `key` to `weight`, with `default_weight` for all
   // other components.
   SparsePowerWeight(const K &key, const W &weight,
                     const W &default_weight = W::Zero())
-      : SparseTupleWeight<W, K>(key, weight, default_weight) {}
+      : Base(key, weight, default_weight) {}
 
   static const SparsePowerWeight &Zero() {
-    static const SparsePowerWeight zero(SparseTupleWeight<W, K>::Zero());
+    static const SparsePowerWeight zero(Base::Zero());
     return zero;
   }
 
   static const SparsePowerWeight &One() {
-    static const SparsePowerWeight one(SparseTupleWeight<W, K>::One());
+    static const SparsePowerWeight one(Base::One());
     return one;
   }
 
   static const SparsePowerWeight &NoWeight() {
-    static const SparsePowerWeight no_weight(
-        SparseTupleWeight<W, K>::NoWeight());
+    static const SparsePowerWeight no_weight(Base::NoWeight());
     return no_weight;
   }
 
   // Overide this: Overwrite the Type method to reflect the key type if using
   // a non-default key type.
-  static const string &Type() {
-    static const string *const type = [] {
-      string type = W::Type() + "_^n";
+  static const std::string &Type() {
+    static const std::string *const type = [] {
+      std::string type = W::Type() + "_^n";
       if (sizeof(K) != sizeof(uint32)) {
         type += "_" + std::to_string(CHAR_BIT * sizeof(K));
       }
-      return new string(type);
+      return new std::string(type);
     }();
     return *type;
   }
@@ -84,18 +84,15 @@ class SparsePowerWeight : public SparseTupleWeight<W, K> {
   }
 
   SparsePowerWeight Quantize(float delta = kDelta) const {
-    return SparsePowerWeight(SparseTupleWeight<W, K>::Quantize(delta));
+    return SparsePowerWeight(Base::Quantize(delta));
   }
 
-  ReverseWeight Reverse() const {
-    return ReverseWeight(SparseTupleWeight<W, K>::Reverse());
-  }
+  ReverseWeight Reverse() const { return ReverseWeight(Base::Reverse()); }
 };
 
 template <class W, class K, class M>
 inline SparsePowerWeight<W, K> SparsePowerWeightMap(
-    const SparsePowerWeight<W, K> &w1,
-    const SparsePowerWeight<W, K> &w2,
+    const SparsePowerWeight<W, K> &w1, const SparsePowerWeight<W, K> &w2,
     const M &operator_mapper) {
   SparsePowerWeight<W, K> result;
   SparseTupleWeightMap(&result, w1, w2, operator_mapper);
@@ -187,9 +184,9 @@ class WeightGenerate<SparsePowerWeight<W, K>> {
   using Weight = SparsePowerWeight<W, K>;
   using Generate = WeightGenerate<W>;
 
-  explicit WeightGenerate(bool allow_zero = true,
-                          size_t sparse_power_rank = 3)
-      : generate_(allow_zero), sparse_power_rank_(sparse_power_rank) {}
+  explicit WeightGenerate(uint64 seed = std::random_device()(),
+                          bool allow_zero = true, size_t sparse_power_rank = 3)
+      : generate_(seed, allow_zero), sparse_power_rank_(sparse_power_rank) {}
 
   Weight operator()() const {
     Weight weight;

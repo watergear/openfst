@@ -6,8 +6,11 @@
 
 #include <fst/properties.h>
 
-#include <stddef.h>
+#include <cstddef>
+#include <string>
 #include <vector>
+
+#include <fst/types.h>
 
 namespace fst {
 
@@ -18,7 +21,7 @@ namespace fst {
 // the case when a new (possibly delayed) FST is instead constructed.
 
 // Properties for a concatenatively-closed FST.
-uint64 ClosureProperties(uint64 inprops, bool star, bool delayed) {
+uint64 ClosureProperties(uint64 inprops, bool, bool delayed) {
   auto outprops = (kError | kAcceptor | kUnweighted | kAccessible) & inprops;
   if (inprops & kUnweighted) outprops |= kUnweightedCycles;
   if (!delayed) {
@@ -29,10 +32,11 @@ uint64 ClosureProperties(uint64 inprops, bool star, bool delayed) {
   if (!delayed || inprops & kAccessible) {
     outprops |= (kNotAcceptor | kNonIDeterministic | kNonODeterministic |
                  kNotILabelSorted | kNotOLabelSorted | kWeighted |
-                 kWeightedCycles | kNotAccessible | kNotCoAccessible) & inprops;
+                 kWeightedCycles | kNotAccessible | kNotCoAccessible) &
+                inprops;
     if ((inprops & kWeighted) && (inprops & kAccessible) &&
         (inprops & kCoAccessible)) {
-        outprops |= kWeightedCycles;
+      outprops |= kWeightedCycles;
     }
   }
   return outprops;
@@ -177,10 +181,10 @@ uint64 InvertProperties(uint64 inprops) {
 uint64 ProjectProperties(uint64 inprops, bool project_input) {
   auto outprops = kAcceptor;
   outprops |= (kExpanded | kMutable | kError | kWeighted | kUnweighted |
-               kWeightedCycles | kUnweightedCycles |
-               kCyclic | kAcyclic | kInitialCyclic | kInitialAcyclic |
-               kTopSorted | kNotTopSorted | kAccessible | kNotAccessible |
-               kCoAccessible | kNotCoAccessible | kString | kNotString) &
+               kWeightedCycles | kUnweightedCycles | kCyclic | kAcyclic |
+               kInitialCyclic | kInitialAcyclic | kTopSorted | kNotTopSorted |
+               kAccessible | kNotAccessible | kCoAccessible | kNotCoAccessible |
+               kString | kNotString) &
               inprops;
   if (project_input) {
     outprops |= (kIDeterministic | kNonIDeterministic | kIEpsilons |
@@ -230,7 +234,7 @@ uint64 RandGenProperties(uint64 inprops, bool weighted) {
 }
 
 // Properties for a replace FST.
-uint64 ReplaceProperties(const std::vector<uint64>& inprops, ssize_t root,
+uint64 ReplaceProperties(const std::vector<uint64>& inprops, size_t root,
                          bool epsilon_on_call, bool epsilon_on_return,
                          bool out_epsilon_on_call, bool out_epsilon_on_return,
                          bool replace_transducer, bool no_empty_fsts,
@@ -252,7 +256,8 @@ uint64 ReplaceProperties(const std::vector<uint64>& inprops, ssize_t root,
       if (replace_transducer) props |= kNotAcceptor & inprop;
       props |= (kNonIDeterministic | kNonODeterministic | kEpsilons |
                 kIEpsilons | kOEpsilons | kWeighted | kWeightedCycles |
-                kCyclic | kNotTopSorted | kNotString) & inprop;
+                kCyclic | kNotTopSorted | kNotString) &
+               inprop;
       if (!(inprop & kString)) string = false;
     }
     outprops |= props;
@@ -360,8 +365,8 @@ uint64 SynchronizeProperties(uint64 inprops) {
                    kUnweighted | kUnweightedCycles) &
                   inprops;
   if (inprops & kAccessible) {
-    outprops |= (kCyclic | kNotCoAccessible | kWeighted | kWeightedCycles) &
-        inprops;
+    outprops |=
+        (kCyclic | kNotCoAccessible | kWeighted | kWeightedCycles) & inprops;
   }
   return outprops;
 }

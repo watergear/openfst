@@ -11,7 +11,6 @@
 #include <utility>
 #include <vector>
 
-#include <fst/types.h>
 #include <fst/log.h>
 #include <fstream>
 
@@ -71,7 +70,7 @@ class MemoryArenaImpl : public MemoryArenaBase {
 
  private:
   const size_t block_size_;  // Default block size in bytes.
-  size_t block_pos_;   // Current position in block in bytes.
+  size_t block_pos_;         // Current position in block in bytes.
   std::list<std::unique_ptr<char[]>> blocks_;  // List of allocated blocks.
 };
 
@@ -295,7 +294,7 @@ class BlockAllocator {
 
   MemoryArenaCollection *arenas_;
 
-  BlockAllocator<T> operator=(const BlockAllocator<T> &);
+  BlockAllocator<T> operator=(const BlockAllocator &);
 };
 
 template <typename T, typename U>
@@ -423,7 +422,7 @@ class PoolAllocator {
 
   MemoryPoolCollection *pools_;
 
-  PoolAllocator<T> operator=(const PoolAllocator<T> &);
+  PoolAllocator<T> operator=(const PoolAllocator &);
 };
 
 template <typename T, typename U>

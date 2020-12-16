@@ -21,7 +21,7 @@ namespace internal {
 template <class Label>
 class PhiFstMatcherData {
  public:
-  PhiFstMatcherData(
+  explicit PhiFstMatcherData(
       Label phi_label = FLAGS_phi_fst_phi_label,
       bool phi_loop = FLAGS_phi_fst_phi_loop,
       MatcherRewriteMode rewrite_mode = RewriteMode(FLAGS_phi_fst_rewrite_mode))
@@ -59,7 +59,7 @@ class PhiFstMatcherData {
   MatcherRewriteMode RewriteMode() const { return rewrite_mode_; }
 
  private:
-  static MatcherRewriteMode RewriteMode(const string &mode) {
+  static MatcherRewriteMode RewriteMode(const std::string &mode) {
     if (mode == "auto") return MATCHER_REWRITE_AUTO;
     if (mode == "always") return MATCHER_REWRITE_ALWAYS;
     if (mode == "never") return MATCHER_REWRITE_NEVER;
@@ -91,7 +91,8 @@ class PhiFstMatcher : public PhiMatcher<M> {
   enum : uint8 { kFlags = flags };
 
   // This makes a copy of the FST.
-  PhiFstMatcher(const FST &fst, MatchType match_type,
+  PhiFstMatcher(
+      const FST &fst, MatchType match_type,
       std::shared_ptr<MatcherData> data = std::make_shared<MatcherData>())
       : PhiMatcher<M>(fst, match_type,
                       PhiLabel(match_type, data ? data->PhiLabel()
@@ -101,7 +102,8 @@ class PhiFstMatcher : public PhiMatcher<M> {
         data_(data) {}
 
   // This doesn't copy the FST.
-  PhiFstMatcher(const FST *fst, MatchType match_type,
+  PhiFstMatcher(
+      const FST *fst, MatchType match_type,
       std::shared_ptr<MatcherData> data = std::make_shared<MatcherData>())
       : PhiMatcher<M>(fst, match_type,
                       PhiLabel(match_type, data ? data->PhiLabel()
@@ -136,47 +138,28 @@ extern const char phi_fst_type[];
 extern const char input_phi_fst_type[];
 extern const char output_phi_fst_type[];
 
-using StdPhiFst =
-    MatcherFst<ConstFst<StdArc>, PhiFstMatcher<SortedMatcher<ConstFst<StdArc>>>,
+template <class Arc>
+using PhiFst =
+    MatcherFst<ConstFst<Arc>, PhiFstMatcher<SortedMatcher<ConstFst<Arc>>>,
                phi_fst_type>;
 
-using LogPhiFst =
-    MatcherFst<ConstFst<LogArc>, PhiFstMatcher<SortedMatcher<ConstFst<LogArc>>>,
-               phi_fst_type>;
+using StdPhiFst = PhiFst<StdArc>;
 
-using Log64PhiFst = MatcherFst<ConstFst<Log64Arc>,
-                               PhiFstMatcher<SortedMatcher<ConstFst<Log64Arc>>>,
-                               input_phi_fst_type>;
-
-using StdInputPhiFst =
-    MatcherFst<ConstFst<StdArc>, PhiFstMatcher<SortedMatcher<ConstFst<StdArc>>,
-                                               kPhiFstMatchInput>,
+template <class Arc>
+using InputPhiFst =
+    MatcherFst<ConstFst<Arc>,
+               PhiFstMatcher<SortedMatcher<ConstFst<Arc>>, kPhiFstMatchInput>,
                input_phi_fst_type>;
 
-using LogInputPhiFst =
-    MatcherFst<ConstFst<LogArc>, PhiFstMatcher<SortedMatcher<ConstFst<LogArc>>,
-                                               kPhiFstMatchInput>,
-               input_phi_fst_type>;
+using StdInputPhiFst = InputPhiFst<StdArc>;
 
-using Log64InputPhiFst = MatcherFst<
-    ConstFst<Log64Arc>,
-    PhiFstMatcher<SortedMatcher<ConstFst<Log64Arc>>, kPhiFstMatchInput>,
-    input_phi_fst_type>;
-
-using StdOutputPhiFst =
-    MatcherFst<ConstFst<StdArc>, PhiFstMatcher<SortedMatcher<ConstFst<StdArc>>,
-                                               kPhiFstMatchOutput>,
+template <class Arc>
+using OutputPhiFst =
+    MatcherFst<ConstFst<Arc>,
+               PhiFstMatcher<SortedMatcher<ConstFst<Arc>>, kPhiFstMatchOutput>,
                output_phi_fst_type>;
 
-using LogOutputPhiFst =
-    MatcherFst<ConstFst<LogArc>, PhiFstMatcher<SortedMatcher<ConstFst<LogArc>>,
-                                               kPhiFstMatchOutput>,
-               output_phi_fst_type>;
-
-using Log64OutputPhiFst = MatcherFst<
-    ConstFst<Log64Arc>,
-    PhiFstMatcher<SortedMatcher<ConstFst<Log64Arc>>, kPhiFstMatchOutput>,
-    output_phi_fst_type>;
+using StdOutputPhiFst = OutputPhiFst<StdArc>;
 
 }  // namespace fst
 
